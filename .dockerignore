@@ -1,0 +1,27 @@
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environment folders
+.env
+.venv
+venv/
+bakasura/
+
+# Ignore macOS specific files
+.DS_Store
+__MACOSX
+
+# Ignore configuration files that might contain secrets
+config.toml
+*.env
+
+# Ignore license and readme files from the image
+LICENSE
+README.md

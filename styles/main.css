@@ -1,0 +1,108 @@
+/* --- Global Style & Variables --- */
+:root {
+    /* Color Palette */
+    --primary-color: #B22222; /* A strong, fiery red */
+    --background-color: #1a1a1a;
+    --secondary-background-color: #2a2a2a;
+    --text-color: #e0e0e0;
+    --subtle-text-color: #a0a0a0;
+    --border-color: #444444;
+    --success-color: #28a745;
+    --error-color: #dc3545;
+    --info-color: #17a2b8;
+
+    /* Font Families */
+    --font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+/* Apply a base font and background to the whole app */
+body {
+    font-family: var(--font-family-sans-serif);
+    color: var(--text-color);
+    background-color: var(--background-color);
+}
+
+/* --- Typography --- */
+.main-title {
+    font-size: 2.8rem !important;
+    font-weight: 700 !important;
+    color: var(--primary-color) !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.sub-title {
+    font-size: 1.2rem !important;
+    color: var(--subtle-text-color) !important;
+    margin-top: 0 !important;
+    font-style: italic;
+}
+
+/* --- UI Component Styling --- */
+.section-header h3 {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+}
+
+.info-box {
+    background-color: var(--secondary-background-color);
+    border-left: 5px solid var(--primary-color);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    color: var(--text-color);
+}
+
+/* Styling the Streamlit file uploader */
+.file-uploader {
+    background-color: var(--secondary-background-color);
+    padding: 2rem;
+    border-radius: 8px;
+    border: 2px dashed var(--border-color);
+    text-align: center;
+    transition: background-color 0.3s ease;
+}
+
+.file-uploader:hover {
+    background-color: #333333;
+    border-color: var(--primary-color);
+}
+
+/* Custom styling for Streamlit buttons */
+.stButton>button {
+    border-radius: 8px !important;
+    border: 2px solid var(--primary-color) !important;
+    background-color: transparent !important;
+    color: var(--primary-color) !important;
+    font-weight: bold !important;
+    padding: 0.5rem 1.5rem !important;
+    transition: all 0.3s ease-in-out !important;
+}
+
+.stButton>button:hover {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+    transform: scale(1.05);
+}
+
+.stButton>button:disabled {
+    border-color: var(--border-color) !important;
+    background-color: var(--secondary-background-color) !important;
+    color: var(--subtle-text-color) !important;
+    cursor: not-allowed;
+}
+
+.stButton>button:disabled:hover {
+     transform: none;
+}
+
+
+/* --- Footer --- */
+.footer {
+    text-align: center;
+    padding: 2rem 0;
+    font-size: 0.9rem;
+    color: var(--subtle-text-color);
+}
