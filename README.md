@@ -64,7 +64,7 @@ For the most reliable and consistent experience, **it is highly recommended to r
 From the project's root directory (where the `Dockerfile` is located), run the following command:
 
 ```bash
-docker build -t farm-app .
+docker build -t bakasura-app .
 ```
 
 **C. Run the Docker Container**
@@ -72,7 +72,7 @@ docker build -t farm-app .
 Make sure your `.env` file is present in the root directory. Run the container using the following command, which securely passes your environment variables into the container:
 
 ```bash
-docker run --env-file .env -p 8000:8000 farm-app
+docker run --env-file .env -p 8000:8000 bakasura-app
 ```
 
 The application is now containerized and accessible at **`http://localhost:8000`**.
