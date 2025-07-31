@@ -50,13 +50,35 @@ For the most reliable and consistent experience, **it is highly recommended to r
 
     ```dotenv
     # .env file
-    AZURE_OPENAI_ENDPOINT="YOUR_AZURE_OPENAI_ENDPOINT"
-    AZURE_OPENAI_API_KEY="YOUR_AZURE_OPENAI_API_KEY"
-    AZURE_OPENAI_API_VERSION="2023-05-15"
-    AZURE_VISION_ENDPOINT="YOUR_AZURE_VISION_ENDPOINT"
-    AZURE_VISION_KEY="YOUR_AZURE_VISION_KEY"
-    COSMOS_ENDPOINT="YOUR_COSMOS_DB_MONGO_VCORE_ENDPOINT"
-    COSMOS_KEY="YOUR_COSMOS_DB_PRIMARY_KEY"
+    
+# .env.example
+#replace the keys with your actual values
+
+# Azure Cosmos DB Configuration
+COSMOS_ENDPOINT=your_cosmos_endpoint
+COSMOS_KEY=your_cosmos_key
+COSMOS_DATABASE=your_database_name
+COSMOS_CONTAINER=your_container_name
+
+# Application Configuration
+CHUNK_SIZE=400
+CHUNK_OVERLAP=100
+MAX_FILES=10
+
+AZURE_VISION_ENDPOINT=your_azure_vision_endpoint
+AZURE_VISION_KEY=your_azure_vision_key
+
+# Azure OpenAI Configuration
+AZURE_OPENAI_API_KEY=your_openai_api_key
+AZURE_OPENAI_ENDPOINT=your_openai_endpoint
+AZURE_OPENAI_API_VERSION=2023-05-15
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=embeddings
+
+# Azure AI Search Configuration
+AZURE_SEARCH_ENDPOINT=your_search_endpoint
+AZURE_SEARCH_KEY=your_search_key
+AZURE_SEARCH_INDEX_NAME=bakasura-documents
+
     ```
 
 **B. Build the Docker Image**
