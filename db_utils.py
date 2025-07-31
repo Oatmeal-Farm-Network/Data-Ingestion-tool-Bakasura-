@@ -1,125 +1,154 @@
+# db_utils.py — Migrated from Cosmos DB to Azure AI Search
+
 import os
 import json
-from azure.cosmos import CosmosClient, PartitionKey
+import uuid
+from datetime import datetime
 from dotenv import load_dotenv
+from azure.search.documents import SearchClient
+from azure.search.documents.indexes import SearchIndexClient
+from azure.search.documents.indexes.models import (
+    SearchIndex,
+    SearchField,
+    SearchFieldDataType,
+    SimpleField,
+    SearchableField,
+    VectorSearch,
+    HnswAlgorithmConfiguration,
+    VectorSearchProfile,
+    SemanticConfiguration,
+    SemanticSearch,
+    SemanticPrioritizedFields,
+    SemanticField
+)
+from azure.search.documents.models import VectorizedQuery
+from azure.core.credentials import AzureKeyCredential
+from embedding_utils import sanitize_key
 
-# Load environment variables
 load_dotenv()
 
-# Constants
-COSMOS_ENDPOINT = os.getenv("COSMOS_ENDPOINT")
-COSMOS_KEY = os.getenv("COSMOS_KEY")
-COSMOS_DATABASE = os.getenv("COSMOS_DATABASE")
-COSMOS_CONTAINER = os.getenv("COSMOS_CONTAINER")
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
+SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
+SEARCH_INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME", "bakasura-documents")
+VECTOR_DIMENSIONS = 1536
 
+def initialize_search_client():
+    if not SEARCH_ENDPOINT or not SEARCH_KEY:
+        raise ValueError("Azure AI Search endpoint and key must be provided in environment variables")
 
-def initialize_cosmos_client():
-    """Initialize and return a Cosmos DB client."""
-    client = CosmosClient(COSMOS_ENDPOINT, credential=COSMOS_KEY)
-    
-    # Get or create database
-    database = client.get_database_client(COSMOS_DATABASE)
-    
-    # Get or create container with partition key
-    container_name = COSMOS_CONTAINER
-    
-    try:
-        container = database.get_container_client(container_name)
-        container.read()
-    except Exception:
-        # Container doesn't exist, create it
-        container = database.create_container(
-            id=container_name,
-            partition_key=PartitionKey(path="/id"),
-            indexing_policy={
-                'indexingMode': 'consistent',
-                'includedPaths': [
-                    {'path': '/*'}
-                ],
-                'excludedPaths': [
-                    {'path': '/embedding/?'}  # Don't index the embedding vector
-                ]
-            }
+    credential = AzureKeyCredential(SEARCH_KEY)
+    index_client = SearchIndexClient(endpoint=SEARCH_ENDPOINT, credential=credential)
+    search_client = SearchClient(endpoint=SEARCH_ENDPOINT, index_name=SEARCH_INDEX_NAME, credential=credential)
+
+    _create_or_update_index(index_client)
+    return search_client, index_client
+
+def _create_or_update_index(index_client):
+    fields = [
+        SimpleField(name="id", type=SearchFieldDataType.String, key=True),
+        SearchableField(name="content", type=SearchFieldDataType.String, searchable=True),
+        SearchField(
+            name="content_vector",
+            type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+            searchable=True,
+            vector_search_dimensions=VECTOR_DIMENSIONS,
+            vector_search_profile_name="my-vector-config"
+        ),
+        SimpleField(name="filename", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="chunk_id", type=SearchFieldDataType.Int32, filterable=True),
+        SimpleField(name="text_hash", type=SearchFieldDataType.String, filterable=True),
+        SimpleField(name="timestamp", type=SearchFieldDataType.DateTimeOffset, filterable=True, sortable=True),
+        SimpleField(name="file_type", type=SearchFieldDataType.String, filterable=True, facetable=True),
+        SimpleField(name="page_number", type=SearchFieldDataType.Int32, filterable=True),
+        SearchableField(name="metadata", type=SearchFieldDataType.String, searchable=True)
+    ]
+
+    vector_search = VectorSearch(
+        algorithms=[
+            HnswAlgorithmConfiguration(
+                name="my-hnsw-config",
+                parameters={
+                    "m": 4,
+                    "efConstruction": 400,
+                    "efSearch": 500,
+                    "metric": "cosine"
+                }
+            )
+        ],
+        profiles=[
+            VectorSearchProfile(
+                name="my-vector-config",
+                algorithm_configuration_name="my-hnsw-config"
+            )
+        ]
+    )
+
+    semantic_config = SemanticConfiguration(
+        name="my-semantic-config",
+        prioritized_fields=SemanticPrioritizedFields(
+            content_fields=[SemanticField(field_name="content")]
         )
-    
-    return container
+    )
+    semantic_search = SemanticSearch(configurations=[semantic_config])
 
+    index = SearchIndex(
+        name=SEARCH_INDEX_NAME,
+        fields=fields,
+        vector_search=vector_search,
+        semantic_search=semantic_search
+    )
 
-def store_embedding(container, text, embedding, metadata):
-    """
-    Store text, embedding, and metadata in Cosmos DB.
-    Performs deduplication based on text hash.
-    """
-    if not container:
-        return False
-    
+    index_client.create_or_update_index(index)
+    print(f"✅ Azure AI Search index '{SEARCH_INDEX_NAME}' is ready")
+
+def store_embedding(search_client, text, embedding, metadata, doc_key=None):
     try:
-        # Check if this text hash already exists
         text_hash = metadata.get("text_hash")
-        
+
         if text_hash:
-            # Query to check if hash exists
-            query = f"SELECT * FROM c WHERE c.metadata.text_hash = '{text_hash}'"
-            items = list(container.query_items(
-                query=query,
-                enable_cross_partition_query=True
+            existing = list(search_client.search(
+                search_text="*",
+                filter=f"text_hash eq '{text_hash}'",
+                select=["id"],
+                top=1
             ))
-            
-            # Skip if hash exists
-            if items:
+            if existing:
+                print(f"⚠️ Duplicate content detected. Skipping storage.")
                 return False
-        
-        # Create a unique ID
-        document_id = f"{metadata['filename']}_{metadata['chunk_id']}"
-        
-        # Create the document
+
+        if not doc_key:
+            doc_key = sanitize_key(f"{metadata['filename']}_{metadata['chunk_id']}_{uuid.uuid4().hex[:6]}")
+
         document = {
-            'id': document_id,
-            'text': text,
-            'embedding': embedding,
-            'metadata': metadata
+            "id": doc_key,
+            "content": text,
+            "content_vector": embedding,
+            "filename": metadata.get("filename"),
+            "chunk_id": metadata.get("chunk_id"),
+            "text_hash": text_hash,
+            "timestamp": datetime.fromtimestamp(metadata.get("timestamp", 0)).isoformat() + "Z",
+            "file_type": "pdf",
+            "page_number": metadata.get("page_number"),
+            "metadata": json.dumps(metadata)
         }
-        
-        # Store in Cosmos DB
-        container.upsert_item(document)
-        return True
-        
+
+        result = search_client.upload_documents(documents=[document])
+        return result[0].succeeded if result else False
+
     except Exception as e:
-        print(f"Error storing embedding: {str(e)}")
+        print(f"❌ Error in store_embedding: {e}")
         return False
 
+def get_document_stats(search_client):
+    try:
+        count_result = search_client.search("*", include_total_count=True, top=0)
+        total_chunks = count_result.get_count()
 
-def query_similar_documents(container, query_embedding, top_k=5):
-    """
-    Query for similar documents using vector similarity.
-    Note: This is a simplified version. Cosmos DB requires special 
-    vector search setup or custom scripts for vector similarity.
-    """
-    # This would typically be implemented using Cosmos DB's 
-    # vector search capabilities or a custom script
-    # Implementing basic functionality here for reference
-    
-    # Convert query embedding to string for the query
-    embedding_str = json.dumps(query_embedding)
-    
-    # This is a placeholder - in a real implementation, you would:
-    # 1. Use Cosmos DB's vector search if available
-    # 2. Or retrieve all documents and compute cosine similarity locally
-    # 3. Or use a stored procedure in Cosmos DB
-    
-    # Placeholder query - this won't work as written
-    # You'll need to adapt this based on your Cosmos DB setup
-    query = """
-    SELECT TOP @top_k c.id, c.text, c.metadata
-    FROM c
-    """
-    
-    parameters = [{"name": "@top_k", "value": top_k}]
-    
-    items = list(container.query_items(
-        query=query,
-        parameters=parameters,
-        enable_cross_partition_query=True
-    ))
-    
-    return items
+        facet_result = search_client.search("*", facets=["filename"], top=0)
+        unique_files = len(facet_result.get_facets().get("filename", []))
+
+        return {"total_chunks": total_chunks, "unique_files": unique_files}
+
+    except Exception as e:
+        print(f"⚠️ Error getting stats: {e}")
+        return {"total_chunks": 0, "unique_files": 0}

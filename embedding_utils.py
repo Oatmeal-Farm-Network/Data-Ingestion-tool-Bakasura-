@@ -10,6 +10,14 @@ import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tempfile
 from openai import AzureOpenAI  # Changed from OpenAI to AzureOpenAI
+import re
+
+def sanitize_key(key: str) -> str:
+    """
+    Convert a string into a valid Azure Search document key:
+    Only allows letters, digits, underscore (_), dash (-), and equal sign (=)
+    """
+    return re.sub(r'[^a-zA-Z0-9_\-=]', '_', key)
 
 # Load environment variables
 load_dotenv()
@@ -197,3 +205,4 @@ def create_embedding(text):
         print(traceback.format_exc())
         # Return a zero vector (1536 dimensions for text-embedding-ada-002)
         return [0.0] * 1536
+    
