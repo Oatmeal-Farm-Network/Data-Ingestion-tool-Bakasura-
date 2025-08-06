@@ -1,0 +1,58 @@
+name: Build and Deploy Bakasura App
+
+on:
+  push:
+    branches: [ main ]
+
+# --- Your Specific Configuration ---
+env:
+  AZURE_CONTAINER_REGISTRY: 'bakasura'
+  AZURE_RESOURCE_GROUP: 'MyAgentResourceGroup'
+  AZURE_CONTAINER_APP: 'bakasura'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Get the code from your repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Log in to Azure using the Service Principal secret
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 3. Log in to the Azure Container Registry
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # 4. Build and push the Docker image to ACR
+      - name: Build and Push Docker Image
+        run: |
+          docker build . -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
+          docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
+
+      # 5. Deploy the new image to Azure Container Apps
+      - name: Deploy to Azure Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
+          resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
+          containerAppName: ${{ env.AZURE_CONTAINER_APP }}
+          secrets: |
+            AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+            AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+            AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+            AZURE_SEARCH_KEY: ${{ secrets.AZURE_SEARCH_KEY }}
+            AZURE_VISION_ENDPOINT: ${{ secrets.AZURE_VISION_ENDPOINT }}
+            AZURE_VISION_KEY: ${{ secrets.AZURE_VISION_KEY }}
+            COSMOS_ENDPOINT: ${{ secrets.COSMOS_ENDPOINT }}
+            COSMOS_KEY: ${{ secrets.COSMOS_KEY }}
+            COSMOS_DATABASE: ${{ secrets.COSMOS_DATABASE }}
+            COSMOS_CONTAINER: ${{ secrets.COSMOS_CONTAINER }}
