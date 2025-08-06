@@ -45,11 +45,18 @@ jobs:
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ env.AZURE_CONTAINER_APP }}
-          secrets: |
-            AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
-            AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
-            AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
-            AZURE_SEARCH_KEY: ${{ secrets.AZURE_SEARCH_KEY }}
-            AZURE_VISION_ENDPOINT: ${{ secrets.AZURE_VISION_ENDPOINT }}
-            AZURE_VISION_KEY: ${{ secrets.AZURE_VISION_KEY }}
+          # This is the corrected block for injecting secrets
+          secret-environment-variables: |
+            AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}
+            AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+            AZURE_OPENAI_API_VERSION=${{ secrets.AZURE_OPENAI_API_VERSION }}
+            AZURE_OPENAI_EMBEDDING_DEPLOYMENT=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+            AZURE_SEARCH_ENDPOINT=${{ secrets.AZURE_SEARCH_ENDPOINT }}
+            AZURE_SEARCH_KEY=${{ secrets.AZURE_SEARCH_KEY }}
+            AZURE_SEARCH_INDEX_NAME=${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+            AZURE_VISION_ENDPOINT=${{ secrets.AZURE_VISION_ENDPOINT }}
+            AZURE_VISION_KEY=${{ secrets.AZURE_VISION_KEY }}
+            CHUNK_OVERLAP=${{ secrets.CHUNK_OVERLAP }}
+            CHUNK_SIZE=${{ secrets.CHUNK_SIZE }}
+            MAX_FILES=${{ secrets.MAX_FILES }}
          
