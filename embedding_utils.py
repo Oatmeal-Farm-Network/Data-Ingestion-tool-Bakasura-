@@ -9,7 +9,7 @@ import io
 import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import tempfile
-from openai import AzureOpenAI  # Changed from OpenAI to AzureOpenAI
+from openai import AzureOpenAI  
 import re
 
 def sanitize_key(key: str) -> str:
