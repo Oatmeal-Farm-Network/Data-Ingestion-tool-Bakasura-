@@ -17,13 +17,13 @@ jobs:
       # 1. Get the code from your repository
       - name: Checkout code
         uses: actions/checkout@v4
-
+       
       # 2. Log in to Azure using the Service Principal secret
       - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
+       
       # 3. Log in to the Azure Container Registry
       - name: Log in to ACR
         uses: azure/docker-login@v1
@@ -31,13 +31,13 @@ jobs:
           login-server: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
-
+       
       # 4. Build and push the Docker image to ACR
       - name: Build and Push Docker Image
         run: |
           docker build . -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
-
+       
       # 5. Deploy the new image to Azure Container Apps
       - name: Deploy to Azure Container App
         uses: azure/container-apps-deploy-action@v1
@@ -45,18 +45,30 @@ jobs:
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ env.AZURE_CONTAINER_APP }}
-          # This is the corrected block for injecting secrets
-          secret-environment-variables: |
-            AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }}
-            AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }}
-            AZURE_OPENAI_API_VERSION=${{ secrets.AZURE_OPENAI_API_VERSION }}
-            AZURE_OPENAI_EMBEDDING_DEPLOYMENT=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
-            AZURE_SEARCH_ENDPOINT=${{ secrets.AZURE_SEARCH_ENDPOINT }}
-            AZURE_SEARCH_KEY=${{ secrets.AZURE_SEARCH_KEY }}
-            AZURE_SEARCH_INDEX_NAME=${{ secrets.AZURE_SEARCH_INDEX_NAME }}
-            AZURE_VISION_ENDPOINT=${{ secrets.AZURE_VISION_ENDPOINT }}
-            AZURE_VISION_KEY=${{ secrets.AZURE_VISION_KEY }}
-            CHUNK_OVERLAP=${{ secrets.CHUNK_OVERLAP }}
-            CHUNK_SIZE=${{ secrets.CHUNK_SIZE }}
-            MAX_FILES=${{ secrets.MAX_FILES }}
-         
+          # Try single-line format for secrets
+          environmentVariables: |
+            AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key
+            AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint
+            AZURE_OPENAI_API_VERSION=secretref:azure-openai-api-version
+            AZURE_OPENAI_EMBEDDING_DEPLOYMENT=secretref:azure-openai-embedding-deployment
+            AZURE_SEARCH_ENDPOINT=secretref:azure-search-endpoint
+            AZURE_SEARCH_KEY=secretref:azure-search-key
+            AZURE_SEARCH_INDEX_NAME=secretref:azure-search-index-name
+            AZURE_VISION_ENDPOINT=secretref:azure-vision-endpoint
+            AZURE_VISION_KEY=secretref:azure-vision-key
+            CHUNK_OVERLAP=secretref:chunk-overlap
+            CHUNK_SIZE=secretref:chunk-size
+            MAX_FILES=secretref:max-files
+          secrets: |
+            azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }}
+            azure-openai-endpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
+            azure-openai-api-version=${{ secrets.AZURE_OPENAI_API_VERSION }}
+            azure-openai-embedding-deployment=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+            azure-search-endpoint=${{ secrets.AZURE_SEARCH_ENDPOINT }}
+            azure-search-key=${{ secrets.AZURE_SEARCH_KEY }}
+            azure-search-index-name=${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+            azure-vision-endpoint=${{ secrets.AZURE_VISION_ENDPOINT }}
+            azure-vision-key=${{ secrets.AZURE_VISION_KEY }}
+            chunk-overlap=${{ secrets.CHUNK_OVERLAP }}
+            chunk-size=${{ secrets.CHUNK_SIZE }}
+            max-files=${{ secrets.MAX_FILES }}
