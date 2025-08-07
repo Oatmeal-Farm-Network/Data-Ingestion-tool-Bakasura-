@@ -22,7 +22,7 @@
 * **Containerization:** Docker
 * **AI & Embeddings:** Azure OpenAI
 * **Image & Text Recognition:** Azure AI Vision
-* **Database:** Azure Cosmos DB for MongoDB (vCore)
+* **Database:** Azure AI Search
 
 ## ⚙️ Setup and Installation
 
