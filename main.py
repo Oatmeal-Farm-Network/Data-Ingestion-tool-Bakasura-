@@ -9,7 +9,7 @@ import tempfile
 from PIL import Image
 from embedding_utils import sanitize_key
 
-# Load environment variables
+# Loading environment variables
 load_dotenv()
 
 # --- Page Configuration ---
@@ -17,8 +17,9 @@ st.set_page_config(
     page_title="Bakasura Knowledge Devourer",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
+
 
 # --- Function to load and inject CSS ---
 def load_css(file_path):
@@ -27,6 +28,7 @@ def load_css(file_path):
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     except FileNotFoundError:
         st.error(f"⚠️ CSS file not found at {file_path}.")
+
 
 # Load Custom CSS
 load_css("styles/main.css")
@@ -38,7 +40,7 @@ required_vars = [
     "AZURE_VISION_ENDPOINT",
     "AZURE_VISION_KEY",
     "AZURE_SEARCH_ENDPOINT",
-    "AZURE_SEARCH_KEY"
+    "AZURE_SEARCH_KEY",
 ]
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
@@ -56,22 +58,32 @@ with col1:
         st.warning(f"Image not found at '{image_path}'")
 
 with col2:
-    st.markdown('<h1 class="main-title">Bakasura Knowledge Devourer</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="sub-title">Your central hub for document ingestion and knowledge processing.</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<h1 class="main-title">Bakasura Knowledge Devourer</h1>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p class="sub-title">Your central hub for document ingestion and knowledge processing.</p>',
+        unsafe_allow_html=True,
+    )
 
 # --- Sidebar ---
 with st.sidebar:
     st.title("About the System")
-    st.markdown("""
+    st.markdown(
+        """
     Like the mythological Bakasura, this system devours documents to extract and process their knowledge for your use.
-    """)
+    """
+    )
     with st.expander("System Capabilities", expanded=True):
-        st.markdown("""
+        st.markdown(
+            """
         - **Text Extraction** from PDFs
         - **OCR** using Azure Vision
         - **Embeddings** using Azure OpenAI
         - **Storage** in Azure AI Search
-        """)
+        """
+        )
     st.subheader("System Diagnostics")
     if st.button("Test Azure OpenAI Connection"):
         try:
@@ -85,16 +97,20 @@ with st.sidebar:
             st.error(f"❌ Failed: {e}")
 
 # --- Main Section ---
-st.markdown('<div class="section-header"><h3>📄 Document Upload</h3></div>', unsafe_allow_html=True)
-st.markdown('<div class="info-box">Upload PDF files containing text, images, or tables for processing and ingestion.</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="section-header"><h3>📄 Document Upload</h3></div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<div class="info-box">Upload PDF files containing text, images, or tables for processing and ingestion.</div>',
+    unsafe_allow_html=True,
+)
 
-if 'processing_complete' not in st.session_state:
+if "processing_complete" not in st.session_state:
     st.session_state.processing_complete = False
 
 uploaded_files = st.file_uploader(
-    "Select PDF files (up to 10)",
-    type=["pdf"],
-    accept_multiple_files=True
+    "Select PDF files (up to 10)", type=["pdf"], accept_multiple_files=True
 )
 
 if st.button("✨ Process Documents", disabled=(not uploaded_files)):
@@ -124,10 +140,12 @@ if st.button("✨ Process Documents", disabled=(not uploaded_files)):
                         "chunk_id": i,
                         "timestamp": time.time(),
                         "text_hash": eu.hash_text(chunk_text),
-                        "page_number": i + 1
+                        "page_number": i + 1,
                     }
                     doc_key = sanitize_key(f"{file_name}_{i}")
-                    success = db.store_embedding(search_client, chunk_text, embedding, metadata, doc_key)
+                    success = db.store_embedding(
+                        search_client, chunk_text, embedding, metadata, doc_key
+                    )
                     if success:
                         total_chunks_ingested += 1
                 st.write(f"✅ Stored {total_chunks_ingested} chunks for {file_name}.")
@@ -136,11 +154,17 @@ if st.button("✨ Process Documents", disabled=(not uploaded_files)):
             finally:
                 os.unlink(temp_path)
 
-    status.update(label=f"Processing complete! Ingested {total_chunks_ingested} chunks.", state="complete")
+    status.update(
+        label=f"Processing complete! Ingested {total_chunks_ingested} chunks.",
+        state="complete",
+    )
     st.session_state.processing_complete = True
 
 if st.session_state.processing_complete:
     st.success("🎉 All files processed and stored in Azure AI Search.")
 
 st.markdown("---")
-st.markdown('<div class="footer">© 2025 Bakasura Project • Built with Azure, OpenAI, and Streamlit</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="footer">© 2025 Bakasura Project • Built with Azure, OpenAI, and Streamlit</div>',
+    unsafe_allow_html=True,
+)
