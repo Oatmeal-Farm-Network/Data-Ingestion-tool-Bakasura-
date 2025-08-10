@@ -1,4 +1,3 @@
-# db_utils.py — Migrated from Cosmos DB to Azure AI Search
 
 import os
 import json
@@ -21,16 +20,14 @@ from azure.search.documents.indexes.models import (
     SemanticPrioritizedFields,
     SemanticField
 )
-from azure.search.documents.models import VectorizedQuery
 from azure.core.credentials import AzureKeyCredential
-from embedding_utils import sanitize_key
 
 load_dotenv()
 
 SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
 SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
 SEARCH_INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME", "bakasura-documents")
-VECTOR_DIMENSIONS = 1536
+VECTOR_DIMENSIONS = int(os.getenv("VECTOR_DIMENSIONS", "1536"))
 
 def initialize_search_client():
     if not SEARCH_ENDPOINT or not SEARCH_KEY:
@@ -43,7 +40,7 @@ def initialize_search_client():
     _create_or_update_index(index_client)
     return search_client, index_client
 
-def _create_or_update_index(index_client):
+def _create_or_update_index(index_client: SearchIndexClient):
     fields = [
         SimpleField(name="id", type=SearchFieldDataType.String, key=True),
         SearchableField(name="content", type=SearchFieldDataType.String, searchable=True),
@@ -67,12 +64,7 @@ def _create_or_update_index(index_client):
         algorithms=[
             HnswAlgorithmConfiguration(
                 name="my-hnsw-config",
-                parameters={
-                    "m": 4,
-                    "efConstruction": 400,
-                    "efSearch": 500,
-                    "metric": "cosine"
-                }
+                parameters={"m": 8, "efConstruction": 200, "efSearch": 100, "metric": "cosine"}
             )
         ],
         profiles=[
@@ -101,54 +93,36 @@ def _create_or_update_index(index_client):
     index_client.create_or_update_index(index)
     print(f"✅ Azure AI Search index '{SEARCH_INDEX_NAME}' is ready")
 
-def store_embedding(search_client, text, embedding, metadata, doc_key=None):
-    try:
-        text_hash = metadata.get("text_hash")
+def document_from_parts(doc_key, text, embedding, metadata: dict):
+    return {
+        "id": doc_key,
+        "content": text,
+        "content_vector": embedding,
+        "filename": metadata.get("filename"),
+        "chunk_id": metadata.get("chunk_id"),
+        "text_hash": metadata.get("text_hash"),
+        "timestamp": datetime.fromtimestamp(metadata.get("timestamp", 0)).isoformat() + "Z",
+        "file_type": "pdf",
+        "page_number": metadata.get("page_number"),
+        "metadata": json.dumps(metadata)
+    }
 
-        if text_hash:
-            existing = list(search_client.search(
-                search_text="*",
-                filter=f"text_hash eq '{text_hash}'",
-                select=["id"],
-                top=1
-            ))
-            if existing:
-                print(f"⚠️ Duplicate content detected. Skipping storage.")
-                return False
-
-        if not doc_key:
-            doc_key = sanitize_key(f"{metadata['filename']}_{metadata['chunk_id']}_{uuid.uuid4().hex[:6]}")
-
-        document = {
-            "id": doc_key,
-            "content": text,
-            "content_vector": embedding,
-            "filename": metadata.get("filename"),
-            "chunk_id": metadata.get("chunk_id"),
-            "text_hash": text_hash,
-            "timestamp": datetime.fromtimestamp(metadata.get("timestamp", 0)).isoformat() + "Z",
-            "file_type": "pdf",
-            "page_number": metadata.get("page_number"),
-            "metadata": json.dumps(metadata)
-        }
-
-        result = search_client.upload_documents(documents=[document])
-        return result[0].succeeded if result else False
-
-    except Exception as e:
-        print(f"❌ Error in store_embedding: {e}")
-        return False
-
-def get_document_stats(search_client):
-    try:
-        count_result = search_client.search("*", include_total_count=True, top=0)
-        total_chunks = count_result.get_count()
-
-        facet_result = search_client.search("*", facets=["filename"], top=0)
-        unique_files = len(facet_result.get_facets().get("filename", []))
-
-        return {"total_chunks": total_chunks, "unique_files": unique_files}
-
-    except Exception as e:
-        print(f"⚠️ Error getting stats: {e}")
-        return {"total_chunks": 0, "unique_files": 0}
+def store_embeddings_bulk(search_client: SearchClient, documents, batch_size=100, max_retries=3):
+    """Upload documents to Azure Search in batches with simple retry/backoff."""
+    from time import sleep
+    total = 0
+    for i in range(0, len(documents), batch_size):
+        batch = documents[i:i+batch_size]
+        attempt = 0
+        while True:
+            try:
+                results = search_client.upload_documents(documents=batch)
+                total += sum(1 for r in results if getattr(r, "succeeded", False))
+                break
+            except Exception as e:
+                attempt += 1
+                if attempt > max_retries:
+                    print(f"❌ Bulk upload failed permanently: {e}")
+                    break
+                sleep(1.5 * attempt)  # backoff
+    return total

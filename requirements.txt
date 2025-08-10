@@ -1,5 +1,6 @@
+
 streamlit
-openai
+openai>=1.35.0
 python-dotenv
 langchain
 
