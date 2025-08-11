@@ -35,12 +35,12 @@ load_css("styles/main.css")
 
 # --- Environment Variable Check ---
 required_vars = [
-    "azure_openai_api_key",
-    "azure_openai_endpoint",
-    "azure_vision_endpoint",
-    "azure_vision_key",
-    "azure_search_endpoint",
-    "azure_search_key",
+    "azure-openai-api-key",
+    "azure-openai-endpoint",
+    "azure-vision-endpoint",
+    "azure-vision-key",
+    "azure-search-endpoint",
+    "azure-search-key",
 ]
 missing_vars = [var for var in required_vars if not os.getenv(var)]
 if missing_vars:
