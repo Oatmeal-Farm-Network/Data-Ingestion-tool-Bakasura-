@@ -26,14 +26,14 @@ load_dotenv()
 
 # Initialize Azure OpenAI client
 client = AzureOpenAI(
-    api_key=os.getenv("azure-openai-api-key"),
-    api_version=os.getenv("azure-openai-api-version", "2023-05-15"),
-    azure_endpoint=os.getenv("azure-openai-endpoint"),
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2023-05-15"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
 )
 
 # Constants
-CHUNK_SIZE = int(os.getenv("chunk-size", 400))
-CHUNK_OVERLAP = int(os.getenv("chunk-overlap", 100))
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 400))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 100))
 
 
 def hash_text(text):
@@ -62,8 +62,8 @@ def extract_text_from_image(image_bytes):
         import time
 
         # Load credentials
-        endpoint = os.getenv("azure-vision-endpoint")
-        key = os.getenv("azure-vision-key")
+        endpoint = os.getenv("AZURE_VISION_ENDPOINT")
+        key = os.getenv("AZURE_VISION_KEY")
 
         # Authenticate client
         vision_client = ComputerVisionClient(
@@ -191,7 +191,7 @@ def create_embedding(text):
     try:
         # Get Azure OpenAI deployment name
         deployment_name = os.getenv(
-            "azure-openai-embedding-deployment", "text-embedding-ada-002"
+            "AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-ada-002"
         )
 
         # Generate embedding using Azure OpenAI

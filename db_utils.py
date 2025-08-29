@@ -27,9 +27,9 @@ from embedding_utils import sanitize_key
 
 load_dotenv()
 
-SEARCH_ENDPOINT = os.getenv("azure-search-endpoint")
-SEARCH_KEY = os.getenv("azure-search-key")
-SEARCH_INDEX_NAME = os.getenv("azure-search-index-name", "bakasura-documents")
+SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
+SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
+SEARCH_INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX_NAME", "bakasura-documents")
 VECTOR_DIMENSIONS = 1536
 
 
