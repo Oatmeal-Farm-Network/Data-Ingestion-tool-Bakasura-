@@ -3,6 +3,7 @@ name: Build and Deploy Bakasura App
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # Allow manual triggering
 
 # --- Your Specific Configuration ---
 env:
@@ -20,7 +21,7 @@ jobs:
        
       # 2. Log in to Azure using the Service Principal secret
       - name: Log in to Azure
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
        
@@ -36,16 +37,39 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker build . -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
+          docker build . -t ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:latest
           docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
+          docker push ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:latest
        
-      # 5. Deploy the new image to Azure Container Apps
+      # 5. Update Container App secrets before deployment
+      - name: Update Container App Secrets
+        run: |
+          echo "Updating secrets in Azure Container App..."
+          az containerapp secret set \
+            --name ${{ env.AZURE_CONTAINER_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --secrets \
+              azure-openai-api-key="${{ secrets.AZURE_OPENAI_API_KEY }}" \
+              azure-openai-endpoint="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
+              azure-openai-api-version="${{ secrets.AZURE_OPENAI_API_VERSION }}" \
+              azure-openai-embedding-deployment="${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}" \
+              azure-search-endpoint="${{ secrets.AZURE_SEARCH_ENDPOINT }}" \
+              azure-search-key="${{ secrets.AZURE_SEARCH_KEY }}" \
+              azure-search-index-name="${{ secrets.AZURE_SEARCH_INDEX_NAME }}" \
+              azure-vision-endpoint="${{ secrets.AZURE_VISION_ENDPOINT }}" \
+              azure-vision-key="${{ secrets.AZURE_VISION_KEY }}" \
+              chunk-overlap="${{ secrets.CHUNK_OVERLAP }}" \
+              chunk-size="${{ secrets.CHUNK_SIZE }}" \
+              max-files="${{ secrets.MAX_FILES }}"
+          echo "Secrets updated successfully!"
+
+      # 6. Deploy the new image to Azure Container Apps
       - name: Deploy to Azure Container App
-        uses: azure/container-apps-deploy-action@v1
+        uses: azure/container-apps-deploy-action@v2
         with:
           imageToDeploy: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ env.AZURE_CONTAINER_APP }}
-          # Try single-line format for secrets
           environmentVariables: |
             AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key
             AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint
@@ -59,16 +83,14 @@ jobs:
             CHUNK_OVERLAP=secretref:chunk-overlap
             CHUNK_SIZE=secretref:chunk-size
             MAX_FILES=secretref:max-files
-          secrets: |
-            azure-openai-api-key=${{ secrets.AZURE_OPENAI_API_KEY }}
-            azure-openai-endpoint=${{ secrets.AZURE_OPENAI_ENDPOINT }}
-            azure-openai-api-version=${{ secrets.AZURE_OPENAI_API_VERSION }}
-            azure-openai-embedding-deployment=${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
-            azure-search-endpoint=${{ secrets.AZURE_SEARCH_ENDPOINT }}
-            azure-search-key=${{ secrets.AZURE_SEARCH_KEY }}
-            azure-search-index-name=${{ secrets.AZURE_SEARCH_INDEX_NAME }}
-            azure-vision-endpoint=${{ secrets.AZURE_VISION_ENDPOINT }}
-            azure-vision-key=${{ secrets.AZURE_VISION_KEY }}
-            chunk-overlap=${{ secrets.CHUNK_OVERLAP }}
-            chunk-size=${{ secrets.CHUNK_SIZE }}
-            max-files=${{ secrets.MAX_FILES }}
+
+      # 7. Verify deployment
+      - name: Verify Deployment
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Image: ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.AZURE_CONTAINER_APP }}:${{ github.run_number }}"
+          echo "Checking container app status..."
+          az containerapp show \
+            --name ${{ env.AZURE_CONTAINER_APP }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+            --query "properties.provisioningState" -o tsv
