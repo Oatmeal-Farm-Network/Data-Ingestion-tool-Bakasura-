@@ -9,7 +9,7 @@ import tempfile
 from PIL import Image
 from embedding_utils import sanitize_key
 
-# Loading environment variables
+# Loading env variables
 load_dotenv()
 
 # --- Page Configuration ---
